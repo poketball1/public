@@ -19,7 +19,7 @@ Claude Code와 Codex CLI를 같은 개발환경에서 서로 호출하는 방법
 | 문서 작성 Codex | `gpt-5.6-sol`, reasoning `max` |
 | Claude → Codex worker | `gpt-5.6-sol`, reasoning `xhigh` |
 | Codex → Claude 기본 예시 | `sonnet`, effort `high` |
-| 자동 wake 검증 | Claude process 종료 → Codex app-server event → 새 Codex turn 완료 |
+| 자동 wake 검증 | idle 즉시 전달 + active turn 중 queue 후 다음 Codex turn 전달 |
 
 모델과 버전은 예시 환경의 값이다. 설치 시점에 사용할 수 있는 모델과 최신 CLI는
 각 계정에서 다시 확인한다.
@@ -242,6 +242,16 @@ Codex result: CODEX_EVENT_WAKE_OK
 Turn status: completed
 ```
 
+Codex가 이미 작업 중인 경우도 검증했다.
+
+```text
+Claude arrived while Codex active: true
+First Codex turn: FIRST_TURN_DONE
+Pending queue after delivery: empty
+Second Codex turn: CODEX_EVENT_WAKE_OK
+Turn status: completed
+```
+
 즉 기술적으로 더는 불가능하지 않다. 다만 Codex TUI에 기능이 생긴 것이 아니라,
 Codex app-server를 사용하는 별도 client/controller가 wake를 구현하는 것이다.
 
@@ -371,6 +381,9 @@ codex app-server --help
 8. active Codex turn 중에는 결과가 queue되는지 확인한다.
 9. turn 완료 뒤 queued 결과가 한 번만 전달되는지 확인한다.
 10. Claude 실패·timeout·controller restart 시 결과가 유실되지 않는지 확인한다.
+
+작성일 기준 1~9의 핵심 event 흐름과 active queue 전달은 통과했다. 실패·timeout과
+controller restart 복구는 운영 controller를 만들 때 별도 durability 검증이 필요하다.
 
 ## 13. 현재 한계
 
