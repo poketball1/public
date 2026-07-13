@@ -4,43 +4,44 @@ Claude Code와 Codex CLI를 같은 개발환경에서 서로 호출하는 방법
 처음 설치하는 사용자와 실제 호출을 수행하는 agent를 함께 독자로 둔다.
 내부 프로젝트 문서가 없어도 핵심 구조를 이해하고 최소 구성을 재현할 수 있게 작성했다.
 
-## 1. 작성·검증 기준
+## 1. 문서 기준
 
 | 항목 | 기준 |
 | --- | --- |
 | 작성일 | 2026-07-13, Asia/Seoul |
-| 호스트 | Windows build `10.0.26200.8655` + WSL2 Debian 13 |
-| 편집기 | VS Code `1.128.0`, Remote-WSL `0.104.3` |
-| 터미널 | VS Code 통합 터미널 안의 WSL Bash |
-| Node.js | CLI 기본 `20.18.0`; Node 20 계열 사용 |
-| Claude Code | `2.1.198`, Claude Max 로그인 |
-| Codex CLI | `0.144.1`, ChatGPT 로그인 |
-| Codex release 확인 | `0.144.1`, 2026-07-09 공개, 작성일 기준 npm/GitHub 최신 |
-| 문서 작성 Codex | `gpt-5.6-sol`, reasoning `max` |
-| Claude → Codex worker | `gpt-5.6-sol`, reasoning `xhigh` |
-| Codex → Claude 기본 예시 | `sonnet`, effort `high` |
-| 자동 wake 검증 | idle 즉시 전달 + active turn 중 queue 후 다음 Codex turn 전달 |
+| 작업환경 | VS Code `1.128.0` + WSL2 Debian 13 터미널 |
+| Claude Code | `2.1.198` |
+| Codex CLI | `0.144.1` |
+| 작성 모델 | `gpt-5.6-sol` |
 
-모델과 버전은 예시 환경의 값이다. 설치 시점에 사용할 수 있는 모델과 최신 CLI는
-각 계정에서 다시 확인한다.
+버전은 작성일의 검증 기준이며 영구 최소 버전은 아니다.
 
-## 2. 사용자용 15문장 요약
+## 2. 사용자 요약
 
-1. 이 구성은 Claude와 Codex가 서로의 장점을 빌려 쓰게 한다.
-2. 두 CLI는 Windows가 아니라 WSL 터미널 안에서 실행한다.
-3. Claude가 Codex를 부를 때는 `codex exec`를 background job으로 실행한다.
-4. top-level Claude가 시작한 background job은 끝나면 Claude를 자동으로 깨운다.
-5. Claude의 background sub-agent가 시작한 작업은 그 sub-agent를 자동으로 깨우지 못한다.
-6. Codex가 Claude를 짧게 부를 때는 foreground로 기다리는 방식이 가장 단순하다.
-7. 이 경우 별도 wake가 필요하지 않고 Claude 응답 뒤에 같은 Codex turn이 이어진다.
-8. Codex가 Claude를 background로 보내고 먼저 쉬면 기존 TUI만으로는 자동 wake되지 않는다.
-9. Codex `0.144.1`의 app-server를 쓰면 이 제한을 controller로 해결할 수 있다.
-10. controller는 Claude 종료 이벤트를 받고 Codex에 새 turn을 시작한다.
-11. Codex가 idle이면 Claude 결과를 바로 새 turn으로 전달한다.
-12. Codex가 작업 중이면 결과를 queue에 보관한 뒤 현재 turn이 끝나면 전달한다.
-13. 정말 즉시 반영해야 할 때만 `turn/steer`로 현재 turn에 결과를 넣는다.
-14. app-server의 process 기능은 experimental이고 host sandbox 밖에서 실행된다.
-15. 먼저 동기 호출을 안정화하고 자동 wake controller는 별도 권한 경계로 운영하는 편이 안전하다.
+### 무엇을 위한 구성인가
+
+- Claude와 Codex를 서로의 sub-agent처럼 활용하는 CLI 인프라다.
+- Claude에서는 `/codex-bg` skill로 Codex를 부르고, Codex에서는 `claude-coder` MCP tool로 Claude를 부른다.
+- main agent가 일을 나누면 상대 agent가 조사·구현·검증을 맡는다.
+- 목표는 main agent가 idle이어도 sub-agent가 완료되면 자동으로 wake되는 것이다.
+- 사용자는 한쪽 CLI에서 요청하고 같은 작업 흐름 안에서 결과를 이어받는다.
+
+### PC에는 얼마나 부담되는가
+
+- 두 agent는 VS Code의 WSL 터미널에서 각각 CLI process로 실행된다.
+- AI 추론은 원격 서비스에서 처리하므로 PC가 Claude나 Codex 모델을 직접 돌리지는 않는다.
+- 전용 GPU는 필요하지 않다.
+- 로컬 부하는 CLI·Node process, 저장소 탐색, 로그와 결과 파일 기록에서 생긴다.
+- 한두 작업은 보통 가볍지만 큰 작업을 여러 개 병렬 실행하면 CPU·RAM·디스크 사용량이 늘어난다.
+
+### 자동 wake는 어디까지 되는가
+
+- Claude main이 Codex를 background로 부르는 방향은 현재 자동 wake가 된다.
+- Codex가 Claude를 동기로 부르면 Codex가 기다리므로 idle wake는 아니다.
+- Codex가 Claude를 background로 보내고 idle이 된 뒤 깨어나는 기능은 아직 운영 적용 전이다.
+- 다만 Codex app-server로 idle wake와 작업 중 queue 전달을 실제 검증했다.
+- Codex가 작업 중이면 현재 turn을 끊지 않고 결과를 보관했다가 완료 후 전달한다.
+- 이 controller는 experimental이므로 별도 운영 구성과 복구 장치가 필요하다.
 
 ## 3. 구조를 한눈에 보기
 
@@ -132,9 +133,11 @@ printf 'WSL_DISTRO_NAME=%s\n' "$WSL_DISTRO_NAME"
 uname -a
 ```
 
-### 6.2 Node.js와 두 CLI
+### 6.2 두 CLI 설치
 
-Node.js 20 계열과 npm을 먼저 준비한다. nvm을 이미 사용한다면 다음처럼 맞출 수 있다.
+Node.js는 wake protocol 자체의 필수조건은 아니다. 다만 아래 npm 설치 명령을 쓰려면
+Node.js와 npm이 필요하다. 두 CLI를 다른 방식으로 이미 설치했다면 이 단계는 생략한다.
+이 문서의 npm 예시는 Node.js 20 계열을 사용한다.
 
 ```bash
 nvm install 20
@@ -162,7 +165,36 @@ codex login status
 
 credential 파일과 token을 repo에 복사하지 않는다.
 
-## 7. Claude → Codex
+### 6.3 `/codex-bg` skill 설치
+
+우리 환경에서 Claude가 Codex를 부를 때는 긴 명령을 매번 작성하지 않고
+`/codex-bg` skill을 사용한다. 공개용 skill 전문은
+[`skills/codex-bg/SKILL.md`](skills/codex-bg/SKILL.md)에 함께 올려두었다.
+
+프로젝트 하나에서만 쓸 때:
+
+```bash
+mkdir -p .claude/skills/codex-bg
+curl -fsSL \
+  https://raw.githubusercontent.com/poketball1/public/main/skills/codex-bg/SKILL.md \
+  -o .claude/skills/codex-bg/SKILL.md
+```
+
+모든 프로젝트에서 쓸 때는 같은 파일을
+`~/.claude/skills/codex-bg/SKILL.md`에 둔다. 새 Claude Code session에서
+`/codex-bg`를 호출하면 skill이 prompt·result·event log 경로를 만들고 Codex를
+Claude Bash background job으로 실행한다.
+
+공개판은 다른 PC에서도 쓸 수 있는 최소형이다. 우리 내부판은 별도 wrapper를 통해
+`health`, `status`, `tail`, `changes`, `cancel`, `resume`까지 제공한다.
+이 skill은 Claude main → Codex 방향을 담당하며, 반대 방향의 app-server controller를
+대신하지 않는다.
+
+Codex → Claude 방향은 현재 별도 slash skill이 아니다. Codex에 등록된
+`claude-coder` MCP가 `claude_run_task`, `claude_run_write_task`,
+`claude_continue_thread` 같은 tool을 제공한다.
+
+## 7. Claude → Codex: `/codex-bg` skill
 
 ### 7.1 최소 실행 명령
 
@@ -209,7 +241,6 @@ claude \
   -p "이 repo를 읽고 요청한 항목만 검토해. 변경하지 마." \
   --output-format json \
   --model sonnet \
-  --effort high \
   --permission-mode default
 ```
 
@@ -275,7 +306,7 @@ stdio transport는 한 줄에 JSON object 하나를 주고받는다. Wire messag
 
 ```json
 {"method":"thread/start","id":2,"params":{"cwd":"/absolute/project/path","approvalPolicy":"never","sandbox":"read-only","ephemeral":false}}
-{"method":"process/spawn","id":3,"params":{"processHandle":"claude-job-001","command":["/absolute/path/to/claude","-p","검토 질문","--output-format","json","--model","sonnet","--effort","high","--permission-mode","default"],"cwd":"/absolute/project/path","streamStdin":false,"streamStdoutStderr":false,"timeoutMs":180000,"tty":false}}
+{"method":"process/spawn","id":3,"params":{"processHandle":"claude-job-001","command":["/absolute/path/to/claude","-p","검토 질문","--output-format","json","--model","sonnet","--permission-mode","default"],"cwd":"/absolute/project/path","streamStdin":false,"streamStdoutStderr":false,"timeoutMs":180000,"tty":false}}
 ```
 
 완료되면 server가 다음 notification을 보낸다.
