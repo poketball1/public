@@ -1,0 +1,28 @@
+# Replace every /home/YOU/... placeholder with a real absolute WSL path.
+# TOML does not expand $HOME or ~ in these string values.
+
+[mcp_servers.claude-coder]
+command = "/home/YOU/code/public/bridge/claude-coder-mcp/run.sh"
+args = []
+startup_timeout_sec = 10.0
+tool_timeout_sec = 1860.0
+default_tools_approval_mode = "approve"
+
+[mcp_servers.claude-coder.env]
+NODE_BIN = "/home/YOU/.nvm/versions/node/v20.18.0/bin/node"
+CLAUDE_BIN = "/home/YOU/.local/bin/claude"
+CLAUDE_MCP_MODEL = "sonnet"
+CLAUDE_MCP_ALLOWED_MODELS = "sonnet,opus,haiku"
+CLAUDE_MCP_WORKDIR = "/home/YOU/code/YOUR_PROJECT"
+CLAUDE_MCP_ALLOWED_WORKDIRS = "/home/YOU/code/YOUR_PROJECT"
+CLAUDE_MCP_DEFAULT_PERMISSION_MODE = "default"
+CLAUDE_MCP_DEFAULT_WRITE_PERMISSION_MODE = "acceptEdits"
+CLAUDE_MCP_ALLOW_DANGEROUS = "0"
+CLAUDE_MCP_ALLOW_BARE = "0"
+CLAUDE_MCP_DEFAULT_WAIT_MS = "1800000"
+CLAUDE_MCP_MAX_WAIT_MS = "1800000"
+CLAUDE_MCP_WRITE_TIMEOUT_MS = "1800000"
+CLAUDE_MCP_RUN_AUDIT_PATH = "/home/YOU/.local/state/claude-codex-bridge/claude-mcp-runs.jsonl"
+CLAUDE_MCP_LIFECYCLE_AUDIT_PATH = "/home/YOU/.local/state/claude-codex-bridge/claude-mcp-lifecycle.jsonl"
+MCP_SUPERVISOR_LIFECYCLE_AUDIT_PATH = "/home/YOU/.local/state/claude-codex-bridge/mcp-supervisor-claude-coder-lifecycle.jsonl"
+PATH = "/home/YOU/.local/bin:/home/YOU/.nvm/versions/node/v20.18.0/bin:/usr/local/bin:/usr/bin:/bin"

@@ -1,0 +1,15 @@
+{
+  "name": "claude-coder-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Dependency-free stdio MCP server that exposes the local Claude Code CLI to Codex.",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "./run.sh",
+    "check": "node --check server.mjs && node --check ../mcp-stdio-supervisor.mjs && node --check ../lib/lifecycle-audit.mjs",
+    "smoke": "node smoke.mjs",
+    "smoke:live": "node smoke.mjs --live"
+  },
+  "dependencies": {}
+}
