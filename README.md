@@ -7,7 +7,8 @@
 
 현행 좌석 지도·위임 판별선·Luna 직원·falsifier·closure 는 [`delegation-stack.md`](delegation-stack.md) 가 현행이다.
 그 글이 인용한 원문은 [`source-material/2026-09-15/`](source-material/2026-09-15/) 에 파일로 있다 (AIR repo `84e63c231` 기준).
-아래 2026-07 사장모드 문서([`fable-boss-mode.md`](fable-boss-mode.md))는 그때의 기록으로 그대로 남긴다 — 현행은 위 글이다.
+2026-07 의 사장모드 글(`fable-boss-mode.md`)과 그 원문 사본은 전제가 은퇴해 삭제했다 — 유효한 조각은 위 글 §8 에 흡수, 원문은 git history.
+아래 설치·wake 매뉴얼은 2026-07 기준 그대로다 (`skills/codex-bg/SKILL.md` 의 현행판은 `source-material/2026-09-15/skills-codex-bg/`).
 
 이 README의 목표는 개념 소개가 아니다. 새 PC에서 아래 순서대로 실행하면 다음 두
 운영 경로를 재현하는 것이다.
