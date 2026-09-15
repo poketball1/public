@@ -475,6 +475,11 @@ test -x "$(command -v codex)"
 
 installer의 기본 모드는 양방향 구성 전체를 설치한다.
 
+전체 설치의 Codex config 파일은 skill runtime·state·설치 잠금 디렉터리와 겹칠 수 없다.
+그 디렉터리 안의 파일이나 디렉터리 자체·상위 경로를 config로 지정하면 쓰기 전에 거절한다.
+실행기나 audit 로그가 설정을 덮어쓰는 경로 충돌을 막는 경계다. `/tmp/config.toml`처럼
+일반 상위 경로만 공유하는 경우는 허용한다. `--only codex-bg`에는 이 config 검사를 적용하지 않는다.
+
 1. `skills/codex-bg/`의 전체 runtime인 `SKILL.md`와 `scripts/run.mjs`를 project
    또는 user skill directory로 복사한다. `*.test.*`·`*.spec.*` 테스트 asset은
    runtime 복사 대상이 아니다.
@@ -528,7 +533,7 @@ helper만 설치할 때의 dry-run과 실제 설치:
   --project "$PROJECT"
 ```
 
-`--only codex-bg` dry-run 출력에는 skill runtime 대상만 있어야 한다. 실제 설치에서
+`--only codex-bg` dry-run의 변경 계획은 skill runtime 설치로 한정된다. 실제 설치에서
 기존 skill asset이 바뀌면 timestamp backup 경로가 출력된다.
 Codex config나 `claude-coder` MCP table을 읽거나 변경하지 않으며 Claude executable
 검사를 설치 대상에 포함하지 않는다.
@@ -1748,7 +1753,7 @@ node skills/codex-bg/scripts/run.mjs health
 
 | 확인 대상 | 실제 결과 |
 | --- | --- |
-| [runner tests](skills/codex-bg/scripts/run.test.mjs) + [installer tests](tests/install.test.mjs) | 2026-09-15 18:18 KST, 28/28 통과·실패 0. 정상/실패/중단/timeout, TOML·symlink·동시 설치 포함 |
+| [runner tests](skills/codex-bg/scripts/run.test.mjs) + [installer tests](tests/install.test.mjs) | 2026-09-15 최종 확인, 33/33 통과·실패 0. 정상/실패/중단/timeout, TOML·symlink·동시 설치·설정 경로 충돌 포함 |
 | Bash/Node syntax, diff whitespace | 모두 exit 0 |
 | `--only codex-bg` 재설치 | exit 0, 기존 skill/runner backup 생성, 설치본과 source `cmp` 일치 |
 | 설치된 helper health | exit 0, CLI `0.154.0`, login `ok: true` |

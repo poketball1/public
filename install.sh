@@ -197,8 +197,8 @@ if (( ! SKILL_RUNTIME_HAS_RUN )); then
   exit 66
 fi
 
-mapfile -d '' BRIDGE_MJS_FILES < <(find "$ROOT/bridge" -type f -name '*.mjs' -print0)
 if [[ "$MODE" == "both" ]]; then
+  mapfile -d '' BRIDGE_MJS_FILES < <(find "$ROOT/bridge" -type f -name '*.mjs' -print0)
   REQUIRED_BRIDGE_FILES=(
     "$MCP_WRAPPER"
     "$ROOT/bridge/claude-coder-mcp/server.mjs"
@@ -486,44 +486,22 @@ except tomllib.TOMLDecodeError as exc:
 PY
 }
 
-if [[ "$MODE" == "both" ]]; then
-  validate_toml_config
-fi
-
-echo "project:       $PROJECT"
-if [[ "$MODE" == "both" ]]; then
-  echo "codex config:  $CODEX_CONFIG"
-else
-  echo "codex config:  $CODEX_CONFIG (unchanged; --only codex-bg)"
-fi
-echo "skill target:  $SKILL_DEST"
-if [[ "$MODE" == "both" ]]; then
-  echo "MCP wrapper:   $MCP_WRAPPER"
-fi
-echo "state dir:     $STATE_DIR"
-
-if ((DRY_RUN)); then
-  printf '\n--- skill files that would be installed ---\n'
-  for skill_file in "${SKILL_RUNTIME_FILES[@]}"; do
-    relative_file="${skill_file#"$SKILL_SOURCE_DIR"/}"
-    printf '%s -> %s\n' "$skill_file" "$SKILL_DEST_DIR/$relative_file"
-  done
-  if [[ "$MODE" == "both" ]]; then
-    printf '\n--- config block that would be appended ---\n%s\n' "$CONFIG_BLOCK"
-  else
-    printf '\n--- Codex MCP config remains unchanged (--only codex-bg) ---\n'
+FLOCK_BIN=""
+REALPATH_BIN=""
+SHA256SUM_BIN=""
+CUT_BIN=""
+if [[ "$MODE" == "both" ]] || (( ! DRY_RUN )); then
+  FLOCK_BIN="$(command -v flock || true)"
+  REALPATH_BIN="$(command -v realpath || true)"
+  SHA256SUM_BIN="$(command -v sha256sum || true)"
+  CUT_BIN="$(command -v cut || true)"
+  require_executable realpath "$REALPATH_BIN"
+  require_executable sha256sum "$SHA256SUM_BIN"
+  require_executable cut "$CUT_BIN"
+  if (( ! DRY_RUN )); then
+    require_executable flock "$FLOCK_BIN"
   fi
-  exit 0
 fi
-
-FLOCK_BIN="$(command -v flock || true)"
-REALPATH_BIN="$(command -v realpath || true)"
-SHA256SUM_BIN="$(command -v sha256sum || true)"
-CUT_BIN="$(command -v cut || true)"
-require_executable flock "$FLOCK_BIN"
-require_executable realpath "$REALPATH_BIN"
-require_executable sha256sum "$SHA256SUM_BIN"
-require_executable cut "$CUT_BIN"
 
 LOCK_WAIT_SECONDS=30
 # Keep this root independent of XDG_RUNTIME_DIR and TMPDIR so every invocation
@@ -539,21 +517,39 @@ canonical_path() {
 }
 
 check_lock_location() {
-  local lock_canonical project_canonical config_parent_canonical
+  local lock_canonical skill_canonical
   check_no_symlink_below_root / "$LOCK_DIR" "installer coordination directory"
   lock_canonical="$(canonical_path "$LOCK_DIR")"
-  project_canonical="$(canonical_path "$PROJECT")"
+  skill_canonical="$(canonical_path "$SKILL_DEST_DIR")"
   case "$lock_canonical" in
-    "$project_canonical"|"$project_canonical"/*)
-      die 73 "installer coordination directory must be outside the project: $LOCK_DIR"
+    "$skill_canonical"|"$skill_canonical"/*)
+      die 73 "installer coordination directory overlaps the skill target: $LOCK_DIR"
       ;;
   esac
-  config_parent_canonical="$(canonical_path "$(dirname -- "$CODEX_CONFIG")")"
-  case "$lock_canonical" in
-    "$config_parent_canonical"|"$config_parent_canonical"/*)
-      die 73 "installer coordination directory must be outside the Codex config directory: $LOCK_DIR"
+  case "$skill_canonical" in
+    "$lock_canonical"|"$lock_canonical"/*)
+      die 73 "skill target overlaps the installer coordination directory: $SKILL_DEST_DIR"
       ;;
   esac
+}
+
+paths_overlap() {
+  local first="$1"
+  local second="$2"
+  [[ "$first" == "$second" || "$first" == "$second"/* || "$second" == "$first"/* ]]
+}
+
+validate_target_layout() {
+  [[ "$MODE" == "both" ]] || return 0
+
+  local config_canonical runtime_dir runtime_canonical
+  config_canonical="$(canonical_path "$CODEX_CONFIG")"
+  for runtime_dir in "$SKILL_DEST_DIR" "$STATE_DIR" "$LOCK_DIR"; do
+    runtime_canonical="$(canonical_path "$runtime_dir")"
+    if paths_overlap "$config_canonical" "$runtime_canonical"; then
+      die 73 "Codex config path overlaps installer-owned runtime directory: $CODEX_CONFIG"
+    fi
+  done
 }
 
 ensure_lock_dir() {
@@ -620,6 +616,40 @@ acquire_lock() {
   fi
 }
 
+if [[ "$MODE" == "both" ]] || (( ! DRY_RUN )); then
+  check_lock_location
+fi
+if [[ "$MODE" == "both" ]]; then
+  validate_target_layout
+  validate_toml_config
+fi
+
+echo "project:       $PROJECT"
+if [[ "$MODE" == "both" ]]; then
+  echo "codex config:  $CODEX_CONFIG"
+else
+  echo "codex config:  $CODEX_CONFIG (unchanged; --only codex-bg)"
+fi
+echo "skill target:  $SKILL_DEST"
+if [[ "$MODE" == "both" ]]; then
+  echo "MCP wrapper:   $MCP_WRAPPER"
+fi
+echo "state dir:     $STATE_DIR"
+
+if ((DRY_RUN)); then
+  printf '\n--- skill files that would be installed ---\n'
+  for skill_file in "${SKILL_RUNTIME_FILES[@]}"; do
+    relative_file="${skill_file#"$SKILL_SOURCE_DIR"/}"
+    printf '%s -> %s\n' "$skill_file" "$SKILL_DEST_DIR/$relative_file"
+  done
+  if [[ "$MODE" == "both" ]]; then
+    printf '\n--- config block that would be appended ---\n%s\n' "$CONFIG_BLOCK"
+  else
+    printf '\n--- Codex MCP config remains unchanged (--only codex-bg) ---\n'
+  fi
+  exit 0
+fi
+
 ensure_lock_dir
 SKILL_LOCK_KEY="$(canonical_path "$SKILL_DEST_DIR")"
 if [[ "$MODE" == "both" ]]; then
@@ -642,12 +672,14 @@ else
 fi
 
 # Paths and TOML may have changed while waiting for the coordination lock.
+check_lock_location
 if [[ "$MODE" == "both" ]]; then
   validate_config_target
 fi
 validate_skill_targets
 if [[ "$MODE" == "both" ]]; then
   validate_state_target
+  validate_target_layout
   validate_toml_config
 fi
 

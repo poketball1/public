@@ -204,6 +204,15 @@ function coordinationDirectory() {
   return path.join("/tmp", "claude-codex-install-" + process.getuid());
 }
 
+function uniqueTmpFile(prefix, contents) {
+  const file = path.join(
+    "/tmp",
+    prefix + process.pid + "-" + Date.now() + "-" + Math.random().toString(16).slice(2) + ".toml",
+  );
+  fs.writeFileSync(file, contents, { flag: "wx" });
+  return file;
+}
+
 function parseToml(file, options) {
   const result = spawnSync(
     options.bins.python,
@@ -294,6 +303,124 @@ test("only mode leaves an existing Codex MCP config byte-identical and does not 
   assert.equal(result.status, 0, resultText(result));
   assert.equal(read(options.config), before);
   assert.equal(fs.existsSync(path.join(options.home, ".local", "state")), false);
+});
+
+test("only mode accepts a unique /tmp config with CODEX_HOME=/tmp in dry-run and write modes", (t) => {
+  const options = prepare(t, "only-tmp-config");
+  const config = uniqueTmpFile("public-installer-only-", "existing = true\n");
+  t.after(() => fs.rmSync(config, { force: true }));
+  fs.unlinkSync(options.bins.python);
+  const onlyOptions = { ...options, config, env: { CODEX_HOME: "/tmp" } };
+  const before = read(config);
+
+  let result = runOnly(options, onlyOptions, ["--dry-run"]);
+  assert.equal(result.status, 0, resultText(result));
+  assert.equal(read(config), before);
+  assert.equal(fs.existsSync(path.join(options.project, ".claude")), false);
+
+  result = runOnly(options, onlyOptions);
+  assert.equal(result.status, 0, resultText(result));
+  assert.equal(read(config), before);
+  assert.equal(fs.existsSync(path.join(options.project, ".claude", "skills", "codex-bg", "SKILL.md")), true);
+});
+
+test("BOTH mode accepts a unique config directly under /tmp and writes valid TOML", (t) => {
+  const options = prepare(t, "both-tmp-config", { claude: true });
+  const config = uniqueTmpFile("public-installer-both-", "existing = true\n");
+  t.after(() => {
+    fs.rmSync(config, { force: true });
+    for (const entry of fs.readdirSync("/tmp")) {
+      if (entry.startsWith(path.basename(config) + ".bak.")) fs.rmSync(path.join("/tmp", entry), { force: true });
+    }
+  });
+  const bothOptions = { ...options, config };
+
+  const result = runBoth(options, bothOptions);
+  assert.equal(result.status, 0, resultText(result));
+  parseToml(config, bothOptions);
+  assert.match(read(config), /\[mcp_servers\.claude-coder\]/);
+  assert.equal(fs.existsSync(path.join(options.project, ".claude", "skills", "codex-bg", "SKILL.md")), true);
+});
+
+test("only mode ignores missing reverse bridge sources", (t) => {
+  const options = prepare(t, "only-no-bridge");
+  fs.rmSync(path.join(options.root, "bridge"), { recursive: true, force: true });
+
+  const result = runOnly(options, options);
+  assert.equal(result.status, 0, resultText(result));
+  assert.equal(result.stderr, "");
+  assert.equal(read(path.join(options.project, ".claude", "skills", "codex-bg", "SKILL.md")),
+    read(path.join(options.root, "skills", "codex-bg", "SKILL.md")));
+  assert.equal(read(path.join(options.project, ".claude", "skills", "codex-bg", "scripts", "run.mjs")),
+    read(path.join(options.root, "skills", "codex-bg", "scripts", "run.mjs")));
+});
+
+test("BOTH mode rejects config paths overlapping skill runtime directories before writes", (t) => {
+  const cases = ["skill-file", "runner", "scripts-dir"];
+  for (const kind of cases) {
+    const options = prepare(t, "target-overlap-" + kind, { claude: true });
+    const destination = skillDestination(options);
+    fs.mkdirSync(destination, { recursive: true });
+    let config;
+    const configBefore = "existing = true\n";
+    if (kind === "skill-file") {
+      config = path.join(destination, "SKILL.md");
+      fs.writeFileSync(config, configBefore);
+    } else if (kind === "runner") {
+      config = path.join(destination, "scripts", "run.mjs");
+      fs.mkdirSync(path.dirname(config), { recursive: true });
+      fs.writeFileSync(config, configBefore);
+    } else {
+      config = path.join(destination, "scripts");
+    }
+    const destinationBefore = listFiles(destination)
+      .sort()
+      .map((file) => [file, read(file)]);
+    const lockDir = coordinationDirectory();
+    const lockEntriesBefore = fs.existsSync(lockDir) ? fs.readdirSync(lockDir).sort() : null;
+
+    const result = runBoth(options, { ...options, config });
+    assert.equal(result.status, 73, resultText(result));
+    assert.match(result.stderr, /overlaps installer-owned runtime directory/);
+    assert.deepEqual(
+      listFiles(destination).sort().map((file) => [file, read(file)]),
+      destinationBefore,
+    );
+    assert.equal(fs.existsSync(config), kind !== "scripts-dir");
+    if (kind !== "scripts-dir") assert.equal(read(config), configBefore);
+    assert.equal(fs.existsSync(path.join(options.home, ".local")), false);
+    if (lockEntriesBefore === null) {
+      assert.equal(fs.existsSync(lockDir), false);
+    } else {
+      assert.deepEqual(fs.readdirSync(lockDir).sort(), lockEntriesBefore);
+    }
+  }
+});
+
+test("BOTH mode rejects config under an unlisted state audit path before writes", (t) => {
+  const options = prepare(t, "state-audit-overlap", { claude: true });
+  const destination = skillDestination(options);
+  fs.mkdirSync(destination, { recursive: true });
+  const oldSkill = "preserve this managed copy\n";
+  fs.writeFileSync(path.join(destination, "SKILL.md"), oldSkill);
+  const config = path.join(
+    options.home,
+    ".local",
+    "state",
+    "claude-codex-bridge",
+    "future-rotation-audit.jsonl",
+  );
+  const destinationBefore = listFiles(destination).sort().map((file) => [file, read(file)]);
+  const result = runBoth(options, { ...options, config });
+
+  assert.equal(result.status, 73, resultText(result));
+  assert.match(result.stderr, /overlaps installer-owned runtime directory/);
+  assert.deepEqual(
+    listFiles(destination).sort().map((file) => [file, read(file)]),
+    destinationBefore,
+  );
+  assert.equal(fs.existsSync(config), false);
+  assert.equal(fs.existsSync(path.join(options.home, ".local")), false);
 });
 
 test("default mode detects direct, quoted, child, and array claude-coder tables before any write", (t) => {
