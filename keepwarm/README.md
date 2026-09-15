@@ -4434,7 +4434,14 @@ try:
                 continue
             t = d.get("type"); m = d.get("message") or {}
             if t == "user" and d.get("timestamp"):
-                last_user = max(last_user or 0, ts(d["timestamp"]))
+                # tool_result rows are user-typed but never fire UserPromptSubmit (no watcher is
+                # spawned for them) — counting them as "a newer prompt" killed the chain right
+                # after a long dialog closed (observed 2026-09-15, run D1). Only prompt rows count.
+                content = m.get("content")
+                is_tool_result = isinstance(content, list) and any(
+                    isinstance(b, dict) and b.get("type") == "tool_result" for b in content)
+                if not is_tool_result:
+                    last_user = max(last_user or 0, ts(d["timestamp"]))
             elif t == "assistant":
                 u = m.get("usage") or {}
                 if (u.get("cache_read_input_tokens") or 0) + (u.get("cache_creation_input_tokens") or 0) > 0 \
@@ -4550,6 +4557,39 @@ spawn (UserPromptSubmit — 사람 프롬프트든 wake 행이든)
 **아직 실행으로 밟지 않은 가지** (정직하게): `no_clock` bail 과 "미응답 상태의 cold 게이트"는 A2 에서
 경로가 열리지 않았다(시계가 항상 읽혔고 답이 왔다). 둘 다 경과 시간과 `COLD_AT` 의 단순 비교라
 단위 검증으로 충분하다고 봤고, 50분 실주기는 독자 환경에서 §6 방법으로 재야 한다.
+
+#### 대화창에 막힌 세션 — exit 2 는 어떻게 되나 (2026-09-15, D1~D3)
+
+터미널 타이핑 relay 의 가장 큰 사고는 **열린 대화창(AskUserQuestion·권한 프롬프트)에 keep-warm 문구가 타이핑돼 선택지를 골라 버리는 것**
+이었다(우리 2026-09-09 사고, 1번 선택률 91%). asyncRewake 는 어떤가를 같은 pty 방식으로 봤다 — haiku 세션에 "AskUserQuestion 으로
+2지선다 질문을 해라" 를 시켜 대화창을 띄운 채 아무것도 누르지 않고, 40초 뒤 exit 2 를 쏘는 단순 hook 을 붙였다:
+
+| 시각 | 일어난 일 | transcript |
+|---|---|---|
+| 18:29:42 | 사람 프롬프트 → hook 스폰 | user 행 |
+| 18:29:46 | 대화창 렌더 | assistant `tool_use` (아직 디스크에 없음 — 아래 "지연 flush") |
+| **18:30:22** | **hook exit 2 (대화창 열림)** | `queue-operation enqueue` 즉시 기록. user 행 없음, assistant 턴 없음, 화면 변화 없음, **대화창 그대로** |
+| 18:32:46 | 사람이 1번 선택 | `queue-operation remove` — 큐 항목이 **버려짐**(`dequeue` 아님). 그 직후 `UserPromptSubmit` 이 한 번 발화(버려질 항목에 대해) |
+| 18:32:49 | 답변 처리 턴 | `cache_read 35,182 · cache_creation 902` — 사람 답이 그대로 반영, wake 문구 없음 |
+| 18:33:26 | 다음 감시자 exit 2 (idle) | `enqueue` + `dequeue` + user 행 + assistant `cache_read 36,084` — 정상 wake |
+
+읽을 것:
+
+1. **안전하다.** 대화창은 건드려지지 않았다 — 선택도 취소도 없다. 큐 메시지는 keystroke 가 아니다. 타이핑 relay 의 사고 부류가 원리적으로
+   사라진다.
+2. **그러나 그 wake 는 버려진다.** 대화창이 닫히는 순간 harness 가 큐 항목을 `remove` 한다 — 모델에 닿지 않고 캐시도 갱신되지 않는다.
+   즉 대화창에 막힌 세션은 asyncRewake 로도 따뜻하게 유지할 수 없다(우리 daemon 도 `turn_hold` 게이트로 이때 주입하지 않으므로 결과는 같다).
+3. **지연 flush.** 턴이 진행 중(대화창 대기 포함)이면 그 턴의 assistant 행은 턴이 끝날 때까지 디스크에 없다(행 순서 vs timestamp 로 확인:
+   `enqueue` 09:30:22Z · `remove` 09:32:46Z 다음에 assistant 09:29:44Z 가 붙는다). 정직한 캐시 시계는 이때 `idle == "-"` 를 읽고 발화하지
+   않는다 — 올바른 침묵이다.
+4. **carrier 결함 하나가 여기서 드러났다**: 대화창 답변으로 생기는 `tool_result` user 행은 `UserPromptSubmit` 을 발화시키지 않는데(감시자
+   스폰 없음), 첫 판본은 그것을 "내 뒤의 새 프롬프트" 로 읽어 `superseded` 로 죽었다 — 긴 대화창이 닫히는 순간 감시자 연쇄가 끊긴다.
+   수리 == `tool_result` 블록을 가진 user 행은 `last_user` 에 세지 않는다(위 스크립트에 반영, D1 transcript 로 오프라인 검증:
+   superseded 0 · answered 1).
+5. 세션이 `/exit` 하면 자고 있던 async hook 은 harness 가 죽인다 — 고아 프로세스 없음.
+
+(권한 프롬프트 run 은 사용자 설정의 `Bash(*)` allow 때문에 프롬프트가 뜨지 않아 무대화창 대조군이 됐다: 70초 간격 wake 3회, 윈도우당
+1회, `cache_read` 35.6K→36.4K.)
 
 #### 그러면 daemon 구조는 버려도 되나
 

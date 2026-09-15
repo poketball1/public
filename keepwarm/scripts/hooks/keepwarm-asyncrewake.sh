@@ -98,7 +98,14 @@ try:
                 continue
             t = d.get("type"); m = d.get("message") or {}
             if t == "user" and d.get("timestamp"):
-                last_user = max(last_user or 0, ts(d["timestamp"]))
+                # tool_result rows are user-typed but never fire UserPromptSubmit (no watcher is
+                # spawned for them) — counting them as "a newer prompt" killed the chain right
+                # after a long dialog closed (observed 2026-09-15, run D1). Only prompt rows count.
+                content = m.get("content")
+                is_tool_result = isinstance(content, list) and any(
+                    isinstance(b, dict) and b.get("type") == "tool_result" for b in content)
+                if not is_tool_result:
+                    last_user = max(last_user or 0, ts(d["timestamp"]))
             elif t == "assistant":
                 u = m.get("usage") or {}
                 if (u.get("cache_read_input_tokens") or 0) + (u.get("cache_creation_input_tokens") or 0) > 0 \
