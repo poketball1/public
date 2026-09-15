@@ -22,6 +22,11 @@
 event로 Codex turn을 새로 시작하는 experimental wake probe도 제공한다. 이것은
 기존 Codex TUI를 임의로 깨우는 기능이 아니며 안정 운영 기본값도 아니다.
 
+
+> **이 저장소의 다른 매뉴얼** — [`keepwarm/`](keepwarm/README.md): Claude Code 프롬프트 캐시
+> keep-warm 을 측정(transcript 에서 캐시 히트/미히트 읽기)부터 자동화(idle 50분 자동 턴 주입
+> daemon·hook·relay)까지 제3자가 따라 만들 수 있게 적은 재현 가이드. 실행 가능한 스크립트 동봉.
+
 ---
 
 ## 1. 작성·검증 기준

@@ -1,0 +1,2 @@
+{"type": "user", "uuid": "u1", "parentUuid": null, "timestamp": "2026-09-15T10:00:00Z", "message": {"role": "user", "content": "설비 상태 알려줘"}}
+{"type": "assistant", "uuid": "a1", "parentUuid": "u1", "timestamp": "2026-09-15T10:00:00Z", "message": {"role": "assistant", "model": "claude-opus-5", "content": [{"type": "text", "text": "확인했습니다."}], "usage": {"cache_read_input_tokens": 200000, "cache_creation_input_tokens": 1500}}}

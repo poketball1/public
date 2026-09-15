@@ -1,0 +1,4 @@
+{"type": "user", "uuid": "u1", "parentUuid": null, "timestamp": "2026-09-15T10:00:00Z", "message": {"role": "user", "content": "조사해줘"}}
+{"type": "assistant", "uuid": "a1", "parentUuid": "u1", "timestamp": "2026-09-15T10:00:00Z", "message": {"role": "assistant", "model": "claude-opus-5", "content": [{"type": "text", "text": "시작합니다."}], "usage": {"cache_read_input_tokens": 200000, "cache_creation_input_tokens": 1500}}}
+{"type": "assistant", "uuid": "s1", "parentUuid": "a1", "timestamp": "2026-09-15T10:50:00Z", "message": {"role": "assistant", "model": "claude-opus-5", "content": [{"type": "text", "text": "(sub-agent)"}], "usage": {"cache_read_input_tokens": 90000, "cache_creation_input_tokens": 1500}}, "isSidechain": true}
+{"type": "user", "uuid": "s2", "parentUuid": "s1", "timestamp": "2026-09-15T10:50:00Z", "message": {"role": "user", "content": "(sub-agent)"}, "isSidechain": true}
