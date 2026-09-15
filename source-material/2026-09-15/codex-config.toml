@@ -1,0 +1,25 @@
+sandbox_mode = "danger-full-access"
+approval_policy = "never"
+
+# AGENTS.md 사슬 주입 상한 (기본 32,768 B). ADR-900 D7 (사용자 결정 2026-09-09 — Claude 와
+# 갈라지지 않게 상한 상향 + 양쪽 diet 수렴): 32 KiB 절단 맞춤안을 기각하고 전문이 들어가게
+# 올린다. `python scripts/instruction-surface/injection_budget.py` 가 사슬이 이 값을 넘으면
+# red 를 낸다 — 값 = 최대 사슬(seats/inside_dev) + 25% 이상 여유를 16,384 배수로 올림.
+project_doc_max_bytes = 180224
+
+[features]
+multi_agent = true
+hooks = true
+
+[agents]
+# 직원(sub-agent) 기본 = Luna/max (사용자 결정 2026-09-07, ADR-872 추기 2026-09-07 (4)): 직원 자리는 부모가 범위·완료
+# 증거를 이미 좁힌 자리라 기본값이 Luna 다. 우선순위 = 스폰 시 명시값 > 역할 toml 의 model/effort pin > 이 값
+# (fork·fresh 구별 없음 — codex 0.153.4 실측). Sol 직원은 예외: 판정 역할 toml 이 Sol/xhigh 를 pin 하고, 그 밖의 Sol 은
+# 스폰 시 model="gpt-5.6-sol", reasoning_effort="xhigh" 쌍을 명시 + 판정 로그 한 줄 (model 만 명시하면 effort 가 새
+# 기본 max 로 뜬다 — VP r1 ①). 구 sol/xhigh 기본(2026-09-06)은 Sol 부모가 Sol 직원을 2.3:1 로 고용해 Luna 토큰 몫이
+# 17% 로 내려간 실측(09-07 13:50~20:40, codex_usage.py --by parent-model)으로 은퇴.
+default_subagent_model = "gpt-5.6-luna"
+default_subagent_reasoning_effort = "max"
+# 폭주만 막는 상한 (사용자 2026-09-06). 구 max_threads 는 이 키의 별칭; max_depth 는 v2 모델에서 무시,
+# job_max_runtime_seconds 는 no-op — 삭제.
+max_concurrent_threads_per_session = 24

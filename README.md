@@ -3,6 +3,12 @@
 이 저장소는 Claude Code와 Codex CLI를 같은 WSL 개발환경에서 서로 호출하기 위한
 실제 설정, skill, MCP server와 검증 코드를 함께 제공한다.
 
+## 2026-09-15 갱신 — 위임 스택 글
+
+현행 좌석 지도·위임 판별선·Luna 직원·falsifier·closure 는 [`delegation-stack.md`](delegation-stack.md) 가 현행이다.
+그 글이 인용한 원문은 [`source-material/2026-09-15/`](source-material/2026-09-15/) 에 파일로 있다 (AIR repo `84e63c231` 기준).
+아래 2026-07 사장모드 문서([`fable-boss-mode.md`](fable-boss-mode.md))는 그때의 기록으로 그대로 남긴다 — 현행은 위 글이다.
+
 이 README의 목표는 개념 소개가 아니다. 새 PC에서 아래 순서대로 실행하면 다음 두
 운영 경로를 재현하는 것이다.
 

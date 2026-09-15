@@ -1,5 +1,7 @@
 # Fable 사장모드: 실전 운영 지침과 설계 배경
 
+> **2026-09-15 갱신본**: 이 글은 2026-07-13 기준이다. 현행 좌석 지도·위임 판별선·Luna 직원·falsifier·closure·ADR-872 재량 envelope 는 [delegation-stack.md](delegation-stack.md) 가 현행이다.
+
 이 문서에서 Fable은 2026-07 로컬 환경에서 설계·판정용 main으로 선택한 모델 또는
 별칭이다. Fable의 공개 가용성이나 다른 모델보다 보편적으로 우월하다는 주장을
 전제하지 않는다.
