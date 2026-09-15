@@ -1,0 +1,4 @@
+{"type": "user", "uuid": "u1", "parentUuid": null, "timestamp": "2026-09-15T10:50:00Z", "message": {"role": "user", "content": "[keep-warm 10:50] arm_t#1 — warm 유지용 자동 턴."}}
+{"type": "assistant", "uuid": "a1", "parentUuid": "u1", "timestamp": "2026-09-15T10:50:00Z", "message": {"role": "assistant", "model": "<synthetic>", "content": [{"type": "text", "text": "API Error: 429"}], "usage": {"cache_read_input_tokens": 0, "cache_creation_input_tokens": 0}}}
+{"type": "user", "uuid": "u2", "parentUuid": null, "timestamp": "2026-09-15T11:45:00Z", "message": {"role": "user", "content": "[keep-warm 11:45] arm_t#2 — warm 유지용 자동 턴."}}
+{"type": "assistant", "uuid": "a2", "parentUuid": "u2", "timestamp": "2026-09-15T11:45:00Z", "message": {"role": "assistant", "model": "<synthetic>", "content": [{"type": "text", "text": "API Error: 429"}], "usage": {"cache_read_input_tokens": 0, "cache_creation_input_tokens": 0}}}

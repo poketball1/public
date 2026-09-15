@@ -1,0 +1,2 @@
+{"type": "assistant", "uuid": "a0", "parentUuid": null, "timestamp": "2026-09-15T10:00:00Z", "message": {"role": "assistant", "model": "claude-opus-5", "content": [{"type": "text", "text": "작업 중."}], "usage": {"cache_read_input_tokens": 200000, "cache_creation_input_tokens": 1500}}}
+{"type": "queue-operation", "operation": "enqueue", "uuid": "q1", "timestamp": "2026-09-15T10:50:00Z", "content": "[keep-warm 10:50] arm_t#1 — warm 유지용 자동 턴. 새 작업을 시작하지 말고 한 줄 확인만 하고 대기를 계속한다."}

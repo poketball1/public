@@ -2,9 +2,18 @@
 
 이 공개 저장소는 Claude Code와 Codex CLI를 같은 WSL 개발환경에서 함께 쓰기 위한
 Claude skill, Codex CLI foreground helper, reverse-direction MCP server와 검증
-도구를 제공한다. 공개판은 AIR 내부 저장소의 private orchestration·session
+도구를 제공한다. 아래 호출 실행기는 AIR 내부 저장소의 private orchestration·session
 delivery·운영 controller를 포함하지 않는다. AIR 전용 경로를 이 저장소의 설치
 전제나 보장 범위로 해석하지 않는다.
+
+## 2026-09-15 갱신 — 위임 스택 글
+
+현행 좌석 지도·위임 판별선·Luna 직원·falsifier·closure 는 [`delegation-stack.md`](delegation-stack.md) 가 현행이다.
+그 글이 인용한 원문은 [`source-material/2026-09-15/`](source-material/2026-09-15/) 에 파일로 있다 (AIR repo `84e63c231` 기준).
+2026-07 의 사장모드 글(`fable-boss-mode.md`)과 그 원문 사본은 전제가 은퇴해 삭제했다 — 유효한 조각은 위 글 §8 에 흡수, 원문은 git history.
+아래 설치·실행 매뉴얼과 [`skills/codex-bg/`](skills/codex-bg/)는 2026-09-15 공개판으로 갱신했다.
+`source-material/2026-09-15/skills-codex-bg/`는 AIR 내부 wrapper용 원문 snapshot이며,
+공개판 helper와 호출 옵션·wake 계약이 다르다. 공개 설치에서는 아래 §10·§13을 따른다.
 
 이 README의 목표는 개념 소개가 아니다. 새 PC에서 아래 순서대로 실행하면 다음 두
 운영 경로를 재현할 수 있다.
@@ -24,6 +33,11 @@ notification sender가 아니다. Claude Code session이 끝나면 tracked backg
 추가로 Codex app-server가 관리하는 thread에서 Claude background process의 완료
 event로 Codex turn을 새로 시작하는 experimental wake probe도 제공한다. 이것은
 기존 Codex TUI를 임의로 깨우는 기능이 아니며 안정 운영 기본값도 아니다.
+
+
+> **이 저장소의 다른 매뉴얼** — [`keepwarm/`](keepwarm/README.md): Claude Code 프롬프트 캐시
+> keep-warm 을 측정(transcript 에서 캐시 히트/미히트 읽기)부터 자동화(idle 50분 자동 턴 주입
+> daemon·hook·relay)까지 제3자가 따라 만들 수 있게 적은 재현 가이드. 실행 가능한 스크립트 동봉.
 
 ---
 
@@ -156,22 +170,23 @@ process/spawn(Claude)
 
 ---
 
-## 3. 저장소에 포함된 실제 파일
+## 3. 저장소의 주요 파일
 
 ```text
 public/
 ├─ README.md
-├─ fable-boss-mode.md
+├─ delegation-stack.md
+├─ keepwarm/
+│  ├─ README.md
+│  └─ scripts/
 ├─ install.sh
 ├─ source-material/
-│  └─ fable-main-instructions-2026-07-13.md
+│  └─ 2026-09-15/
 ├─ tests/
 │  └─ install.test.mjs
 ├─ examples/
 │  └─ codex-config.toml
 ├─ skills/
-│  ├─ boss-mode/
-│  │  └─ SKILL.md
 │  └─ codex-bg/
 │     ├─ SKILL.md
 │     └─ scripts/
@@ -197,9 +212,10 @@ public/
 | `install.sh` | 기본 설치는 skill과 reverse MCP를 설치하고, `--only codex-bg`는 skill runtime만 복사 |
 | `skills/codex-bg/SKILL.md` | Claude main → Codex helper 호출 계약 |
 | `skills/codex-bg/scripts/run.mjs` | Node 20 built-in만 사용하는 foreground `health`, `run`, `resume`, `status` CLI |
-| `skills/boss-mode/SKILL.md` | 프로젝트의 모델·권한 설정을 따르는 선택적 사장모드 스킬 |
+| `delegation-stack.md` | 사장·직원·감리 운영 규칙과 자기 환경으로의 이식 지침 |
 | `skills/codex-bg/scripts/run.test.mjs`, `tests/install.test.mjs` | 모델 호출 없이 실행·실패·설치 보존을 검증하는 Node 테스트 |
-| `fable-boss-mode.md`, `source-material/` | 2026-07 당시의 운영 설명과 원문 기록 |
+| `source-material/2026-09-15/` | AIR 위임 스택 원문 snapshot. 공개 helper의 설치용 runtime과 구분 |
+| `keepwarm/` | 별도의 Claude prompt cache keep-warm 재현 가이드와 스크립트 |
 | `bridge/claude-coder-mcp/server.mjs` | Codex에 Claude read/write/resume tool 제공 |
 | `bridge/claude-coder-mcp/run.sh` | Node·Claude 경로 확인, state dir 준비, supervisor 시작 |
 | `bridge/mcp-stdio-supervisor.mjs` | MCP child crash 뒤 다음 요청을 위한 재기동 |
@@ -601,17 +617,9 @@ cp --backup=numbered "$BRIDGE_REPO/skills/codex-bg/scripts/run.mjs" \
 디렉터리의 번호가 붙은 backup으로 보존한다. 수동 복사는 installer의 경로 검사와
 동시 설치 잠금을 제공하지 않으므로, 대상이 일반 디렉터리인지 확인하고 단독으로 실행한다.
 
-사장모드도 사용하려면 [공개 Boss Mode 스킬](skills/boss-mode/SKILL.md)을 아래처럼
-project scope에 설치한다. 기존 파일은 번호가 붙은 backup으로 보존한다.
-
-```bash
-BOSS_SKILL_DIR="$PROJECT/.claude/skills/boss-mode"
-mkdir -p "$BOSS_SKILL_DIR"
-cp --backup=numbered "$BRIDGE_REPO/skills/boss-mode/SKILL.md" "$BOSS_SKILL_DIR/SKILL.md"
-```
-
-이 선택적 스킬은 installer가 자동 설치하지 않는다.
-`fable-boss-mode.md`와 `source-material/`의 7월 기록은 설치용 지침이 아니다.
+사장모드 운영 규칙은 [위임 스택 §8](delegation-stack.md#8-자기-환경에-옮기기)의
+이식 지침을 따른다. 별도 `skills/boss-mode/SKILL.md`는 폐기됐으며 installer도 설치하지 않는다.
+`source-material/2026-09-15/`의 AIR 원문은 환경 치환 없이 설치하는 공개 skill이 아니다.
 
 ### 11.2 권한과 source availability
 

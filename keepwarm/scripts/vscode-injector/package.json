@@ -1,0 +1,25 @@
+{
+  "name": "keepwarm-injector",
+  "displayName": "keep-warm injector",
+  "description": "Relays keep-warm request files into the Claude Code terminal that owns the target session id.",
+  "version": "0.1.0",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "keepwarmInjector.scanNow",
+        "title": "keep-warm: scan request directory now"
+      }
+    ]
+  }
+}

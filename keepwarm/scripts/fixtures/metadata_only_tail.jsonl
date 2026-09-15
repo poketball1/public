@@ -1,0 +1,5 @@
+{"type": "user", "uuid": "u1", "parentUuid": null, "timestamp": "2026-09-15T10:00:00Z", "message": {"role": "user", "content": "안녕"}}
+{"type": "assistant", "uuid": "a1", "parentUuid": "u1", "timestamp": "2026-09-15T10:00:00Z", "message": {"role": "assistant", "model": "claude-opus-5", "content": [{"type": "text", "text": "네."}], "usage": {"cache_read_input_tokens": 200000, "cache_creation_input_tokens": 1500}}}
+{"type": "attachment", "uuid": "m1", "parentUuid": "a1", "content": {"note": "reminder"}}
+{"type": "custom-title", "sessionId": "s", "customTitle": "내 세션"}
+{"type": "bridge-session", "uuid": "m3"}

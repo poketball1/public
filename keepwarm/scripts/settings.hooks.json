@@ -1,0 +1,47 @@
+{
+  "_comment": [
+    "Paste these two blocks into the `hooks` object of ~/.claude/settings.json",
+    "(user scope) or <project>/.claude/settings.json (project scope).",
+    "",
+    "SessionStart: matcher 'startup|resume|clear' — the three sources that can",
+    "leave a session unarmed. 'compact' is excluded (same sid, same process,",
+    "the arm survives) and 'fork' is excluded conservatively. An entry with no",
+    "matcher runs on EVERY source, which is not what we want here.",
+    "",
+    "async:true means the hook does not hold up the session; timeout 15 is a",
+    "ceiling we never approach because the hook detaches and returns.",
+    "",
+    "Stop: no matcher — it fires on every completed turn. The re-arm hook rides",
+    "an async entry so a slow self-heal can never delay the next prompt.",
+    "",
+    "Paths use ~ so they work regardless of username. If you keep the scripts",
+    "elsewhere, set KEEPWARM_CTL in your environment instead of editing these."
+  ],
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/keepwarm/scripts/hooks/keepwarm-birth.sh",
+            "timeout": 15,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/keepwarm/scripts/hooks/keepwarm-rearm.sh",
+            "timeout": 120,
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}

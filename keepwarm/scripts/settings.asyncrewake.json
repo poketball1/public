@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/keepwarm-asyncrewake.sh",
+            "async": true,
+            "asyncRewake": true,
+            "timeout": 4200
+          }
+        ]
+      }
+    ]
+  }
+}

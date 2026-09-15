@@ -1,0 +1,10 @@
+{
+  "env": {
+    "CLAUDE_CODE_SUBAGENT_MODEL": "opus"
+  },
+  "permissions": {
+    "deny": [
+      "Agent(subagent_type:fork)"
+    ]
+  }
+}
