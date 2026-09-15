@@ -684,7 +684,10 @@ reasoning, sandbox, mode 를 기록하고 검수 완료 전까지 유지한다.
 ### 8.2 Codex 2단 추가
 
 5. Codex CLI 와 `codex-bg` wrapper — 설치·wake 계약은 이 repo 의 [README](README.md) 와
-   [`skills/codex-bg/`](skills/codex-bg/) 가 소유한다 (2026-07 버전; 현행 SKILL 원문은 §9).
+   [`skills/codex-bg/`](skills/codex-bg/) 가 소유한다 (2026-09-15 공개판). §9의 SKILL은 AIR 내부
+   wrapper 원문 snapshot이다. 공개 helper는 `run.mjs`와 Claude tracked Bash를 사용하며,
+   원문의 `--output`·`--no-wait`·역할별 모델 배정·세션 wake 서비스를 제공하지 않는다.
+   공개 실행·재개 명령은 README §13을 따른다.
 6. `.codex/config.toml` 의 `[agents]` 블록 (`multi_agent = true`, Luna 기본).
 7. `.codex/agents/` 에 `luna-worker.toml` · `falsifier.toml` · `closure.toml` 세 개면 시작된다. `air-analyst` 류는
    우리 도메인 전용이라 없어도 된다.
